@@ -20,9 +20,9 @@ H_DIFF = 1e-4
 ## Utility
 GAMMA = 0.0
 def u(x):
-    return x.clamp_min(1e-6).pow(1 - GAMMA) / (1 - GAMMA)
+    return torch.where(x>0, x.clamp_min(1e-6).pow(1 - GAMMA) / (1 - GAMMA), torch.zeros_like(x))
 def du(x):
-    return x.clamp_min(1e-6).pow(-GAMMA)
+    return torch.where(x>0, x.clamp_min(1e-6).pow(-GAMMA), torch.zeros_like(x))
 
 DEVICE = torch.device(
     torch.accelerator.current_accelerator().type
