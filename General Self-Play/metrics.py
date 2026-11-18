@@ -7,11 +7,14 @@ import network1 as net
 
 
 @torch.no_grad()
-def exploitability(policy, T=201):
-    grid, qs = bs.field_cdf(policy)
+def deviation_gain(policy, field=None, T=201):
+    grid, qs = bs.field_cdf(policy) if field is None else field
     v = torch.linspace(0.01, 1, T, device=cfg.DEVICE)
     cand = grid.unsqueeze(0).expand(T, -1)
-    eu = (bs.interp_F(cand, grid, qs) ** (cfg.N - 1) * cfg.u(v.unsqueeze(1) - cand)).clamp_min(0)
+    surplus = v.unsqueeze(1) - cand
+    eu = torch.where(surplus > 0,
+                     bs.interp_F(cand, grid, qs) ** (cfg.N - 1) * cfg.u(surplus),
+                     torch.zeros_like(surplus))
     br = eu.max(dim=1).values
     mu, _ = policy(bs.obs(v)); played = v * mu
     eu_played = bs.interp_F(played, grid, qs) ** (cfg.N - 1) * cfg.u(v - played)
@@ -19,8 +22,13 @@ def exploitability(policy, T=201):
 
 
 @torch.no_grad()
-def relative_utility_loss(policy, T=201):
-    D, br = exploitability(policy)
+def exploitability(policy, field=None, T=201):
+    return cfg.N * deviation_gain(policy, field, T)[0]
+
+
+@torch.no_grad()
+def relative_utility_loss(policy, field=None, T=201):
+    D, br = deviation_gain(policy, field, T)
     return D / br
 
 
@@ -66,7 +74,7 @@ def check_play(M=1 << 16):
     v = torch.rand(M, cfg.N, device=cfg.DEVICE); c = (cfg.N - 1) / (cfg.N - cfg.GAMMA)
     bids = c * v
     rev = (bs.play(bids) * bids).sum(1).mean()
-    print(rev.item(), (cfg.N - 1) / (cfg.N + 1))   # comparing calculated result to the analytical result
+    print(rev.item(), c * cfg.N / (cfg.N +1))   # comparing calculated result to the analytical result
     
     
 def check_revenue(tol=5e-3, M=1 << 16):
@@ -80,4 +88,12 @@ def check_revenue(tol=5e-3, M=1 << 16):
 
     print(f"revenue err {err:.1e}  tol {tol:.0e}  {'ok' if err <= tol else 'FAIL'}")
     assert err <= tol, "revenue validation failed -- check play(), sample_bids(), field_cdf()"
-    # print(revenue_mc(rule, cfg.N, M=M), revenue_cdf(rule, cfg.N), efficiencyR(rule, cfg.N, M=M))   # uncomment if revenue check fails
+    
+
+@torch.no_grad()
+def played_payoff(policy, field=None, T=201):
+    grid, qs = bs.field_cdf(policy) if field is None else field
+    v = torch.linspace(0.01, 1, T, device=cfg.DEVICE)
+    mu, _ = policy(bs.obs(v))
+    b = v * mu
+    return (bs.interp_F(b, grid, qs) ** (cfg.N - 1) * cfg.u(v - b)).mean().item()
