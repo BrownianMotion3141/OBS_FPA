@@ -1,5 +1,4 @@
 # observations, bid sampling, auction clearing, policy update rules
-
 import torch
 
 import config as cfg
@@ -30,7 +29,7 @@ def selfplay_step(policy, opt, M=1 << 15):
     b = ((1 - mu) * kappa).clamp_min(1.0)   # min of 1 keeps the log_prob finite
     logp = torch.distributions.Beta(a, b).log_prob(S)
 
-    payoff = play(bids) * (v - bids)                  
+    payoff = cfg.u(v-bids)                  
     adv = (payoff - payoff.mean()).detach()         
     loss = -(logp * adv).mean()
 
@@ -42,7 +41,7 @@ def selfplay_step(policy, opt, M=1 << 15):
 
 # building an empirical CDF of rival bids
 @torch.no_grad()
-def field_cdf(policy, K=cfg.K_CDF, n=cfg.N_FIELD):
+def field_cdf(policy=None, K=cfg.K_CDF, n=cfg.N_FIELD):
     b, _, _, _ = sample_bids(policy, torch.rand(n, device=cfg.DEVICE))
     grid = torch.cat([b.new_zeros(1), torch.quantile(b, torch.linspace(0, 1, K, device=cfg.DEVICE)), b.new_ones(1)])
     qs   = torch.cat([b.new_zeros(1), torch.linspace(0, 1, K, device=cfg.DEVICE), b.new_ones(1)])
@@ -56,8 +55,8 @@ def interp_F(x, grid, qs):
     return (qs[i - 1] + w * (qs[i] - qs[i - 1])).clamp(1e-6, 1 - 1e-6)
 
 # optimises toward the analytical solution
-def pseudo_step(policy, opt, M=cfg.M_STEP, h=cfg.H_DIFF):
-    grid, qs = field_cdf(policy)
+def pseudo_step(policy, opt, field=None, M=cfg.M_STEP, h=cfg.H_DIFF):
+    grid, qs = field_cdf(policy) if field is None else field
     v = torch.rand(M, cfg.N, device=cfg.DEVICE)
     bid, _, mu, kappa = sample_bids(policy, v)
 
