@@ -39,12 +39,14 @@ def main():
 
     vg = torch.linspace(0.0, 1.0, 101, device=cfg.DEVICE)
     mu_avg, kappa_avg = policy(bs.obs(vg))
-    print(f"avg policy: mu {mu_avg.mean().item():.4f}  kappa {kappa_avg.mean().item():.1f}")
-    print(f"exploitability: {mt.relative_utility_loss(policy):.4f}")
-    print(f"Expected revenue: {mt.revenue_mc(policy):.4f}")
-    print(f"Revenue Efficiency: {mt.efficiencyR(policy):.4f}")
-    print(f"Allocative Efficiency: {mt.efficiencyA(policy):.4f}")
-    print(f"Curve Distance: {mt.curve_distance(policy):.4f}")
+print(f"avg policy: mu {mu_avg.mean().item():.4f}  kappa {kappa_avg.mean().item():.1f}")
+print(f"Relative Utility Loss: {mt.relative_utility_loss(policy):.4f}")
+print(f"Deviation Gain: {mt.deviation_gain(policy):.4f}")
+print(f"Exploitability: {mt.exploitability(policy):.4f}")
+print(f"Expected revenue: {mt.revenue_mc(policy):.4f}")
+print(f"Revenue Efficiency: {mt.efficiencyR(policy):.4f}")
+print(f"Allocative Efficiency: {mt.efficiencyA(policy):.4f}")
+print(f"Curve Distance: {mt.curve_distance(policy):.4f}")
 
 
 if __name__ == "__main__":
