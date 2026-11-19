@@ -29,7 +29,7 @@ def selfplay_step(policy, opt, M=1 << 15):
     b = ((1 - mu) * kappa).clamp_min(1.0)   # min of 1 keeps the log_prob finite
     logp = torch.distributions.Beta(a, b).log_prob(S)
 
-    payoff = cfg.u(v-bids)                  
+    payoff = play(bids) * cfg.u(v-bids)                  
     adv = (payoff - payoff.mean()).detach()         
     loss = -(logp * adv).mean()
 
